@@ -6,7 +6,7 @@ import {
   messagesTable,
   discussionsTable,
 } from "@workspace/db";
-import { eq, and, desc, gte } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { Bot } from "grammy";
 import { callAI, type ChatMessage } from "./ai-clients";
 import { parseTags } from "./tags";
@@ -21,20 +21,16 @@ interface TelegramMessage {
   sender_chat?: { id: number; title?: string };
 }
 
-// Random delay between min and max seconds
 function randomDelay(minSec: number, maxSec: number): Promise<void> {
   const ms = (minSec + Math.random() * (maxSec - minSec)) * 1000;
   return new Promise((r) => setTimeout(r, ms));
 }
 
-// Check if agent should respond based on responseChance
 function shouldRespond(chance: number): boolean {
   return Math.random() * 100 < chance;
 }
 
-// Build message history as chat messages for AI
 async function buildContext(
-  channelId: number,
   discussionId: number,
   contextCount: number
 ): Promise<ChatMessage[]> {
@@ -53,7 +49,6 @@ async function buildContext(
     }));
 }
 
-// Post a message in the comments group
 async function postAgentMessage(
   bot: Bot,
   groupId: string,
@@ -61,17 +56,9 @@ async function postAgentMessage(
   replyToId?: number | null
 ): Promise<number | null> {
   try {
-    const params: Record<string, unknown> = {
-      chat_id: groupId,
-      text,
-      parse_mode: "HTML",
-    };
-    if (replyToId) params.reply_to_message_id = replyToId;
-
     const sendOpts: Record<string, unknown> = { parse_mode: "HTML" };
     if (replyToId) sendOpts["reply_parameters"] = { message_id: replyToId };
     const msg = await (bot.api.sendMessage as Function)(groupId, text, sendOpts);
-
     return msg.message_id;
   } catch (err) {
     logger.error({ err, groupId }, "postAgentMessage failed");
@@ -96,7 +83,6 @@ export async function handleNewPost(opts: {
     return;
   }
 
-  // Get agents bound to this channel
   const bindings = await db
     .select({ agent: agentsTable })
     .from(channelAgentsTable)
@@ -111,7 +97,6 @@ export async function handleNewPost(opts: {
 
   if (bindings.length === 0) return;
 
-  // Create or find discussion
   const [discussion] = await db
     .insert(discussionsTable)
     .values({
@@ -121,7 +106,6 @@ export async function handleNewPost(opts: {
     })
     .returning();
 
-  // Save the trigger post as a message
   await db.insert(messagesTable).values({
     channelId: channel.id,
     discussionId: discussion.id,
@@ -135,23 +119,21 @@ export async function handleNewPost(opts: {
 
   logger.info({ discussionId: discussion.id, channelChatId, agents: bindings.length }, "Discussion started");
 
-  // Each agent decides whether to respond
   for (const { agent } of bindings) {
     if (!shouldRespond(agent.responseChance)) {
       logger.debug({ agentId: agent.id }, "Agent skipped (chance)");
       continue;
     }
 
-    // Random delay
     await randomDelay(agent.minDelaySec, agent.maxDelaySec);
 
     try {
       const bot = new Bot(agent.botToken);
-      const context = await buildContext(channel.id, discussion.id, channel.contextMessages);
+      const context = await buildContext(discussion.id, channel.contextMessages);
 
       const systemPrompt =
         agent.userPrompt ??
-        `Ты — ${agent.name} (@${agent.botUsername}), живой участник Telegram-канала. 
+        `Ты — ${agent.name} (@${agent.botUsername}), живой участник Telegram-канала.
 Ты можешь использовать теги для управления поведением:
 [SLEEP:N] — подождать N секунд перед следующим ответом
 [SILENT] — не отвечать на этот пост
@@ -163,10 +145,7 @@ export async function handleNewPost(opts: {
       const messages: ChatMessage[] = [
         { role: "system", content: systemPrompt },
         ...context,
-        {
-          role: "user",
-          content: `Новый пост в канале: "${triggerMessage.text ?? ""}"`,
-        },
+        { role: "user", content: `Новый пост в канале: "${triggerMessage.text ?? ""}"` },
       ];
 
       const aiResult = await callAI({
@@ -193,12 +172,7 @@ export async function handleNewPost(opts: {
         await new Promise((r) => setTimeout(r, tags.sleep! * 1000));
       }
 
-      const sentId = await postAgentMessage(
-        bot,
-        channel.linkedGroupId!,
-        clean,
-        tags.replyTo ?? undefined
-      );
+      const sentId = await postAgentMessage(bot, channel.linkedGroupId!, clean, tags.replyTo ?? undefined);
 
       if (sentId) {
         await db.insert(messagesTable).values({

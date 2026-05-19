@@ -11,7 +11,6 @@ export interface AIResponse {
   error?: string;
 }
 
-// ── FavoriteAPI queue: 1 request per key ──────────────────────────────────
 const favoriteQueues = new Map<string, PQueue>();
 
 function getFavoriteQueue(apiKey: string): PQueue {
@@ -52,8 +51,7 @@ async function callFavoriteWithRetry(
       }
 
       const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
-      const text = data.choices?.[0]?.message?.content ?? "";
-      return { text };
+      return { text: data.choices?.[0]?.message?.content ?? "" };
     } catch (err) {
       logger.error({ err, attempt }, "FavoriteAPI request error");
       if (attempt === retries - 1) return { text: "", error: String(err) };
@@ -70,10 +68,9 @@ export async function callFavoriteApi(
   messages: ChatMessage[]
 ): Promise<AIResponse> {
   const queue = getFavoriteQueue(apiKey);
-  return queue.add(() => callFavoriteWithRetry(apiUrl, apiKey, model, messages));
+  return queue.add(() => callFavoriteWithRetry(apiUrl, apiKey, model, messages)) as Promise<AIResponse>;
 }
 
-// ── OpenRouter ────────────────────────────────────────────────────────────
 export async function callOpenRouter(
   apiKey: string,
   model: string,
@@ -105,37 +102,6 @@ export async function callOpenRouter(
   }
 }
 
-// ── OpenAI ────────────────────────────────────────────────────────────────
-export async function callOpenAI(
-  apiKey: string,
-  model: string,
-  messages: ChatMessage[]
-): Promise<AIResponse> {
-  try {
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({ model, messages }),
-      signal: AbortSignal.timeout(60_000),
-    });
-
-    if (!res.ok) {
-      const body = await res.text();
-      return { text: "", error: `HTTP ${res.status}: ${body}` };
-    }
-
-    const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
-    return { text: data.choices?.[0]?.message?.content ?? "" };
-  } catch (err) {
-    logger.error({ err }, "OpenAI request error");
-    return { text: "", error: String(err) };
-  }
-}
-
-// ── Unified entry point ───────────────────────────────────────────────────
 export async function callAI(opts: {
   apiType: string;
   apiKey: string;
@@ -148,10 +114,6 @@ export async function callAI(opts: {
   if (apiType === "favorite") {
     if (!apiUrl) return { text: "", error: "FavoriteAPI: apiUrl not set" };
     return callFavoriteApi(apiUrl, apiKey, model, messages);
-  }
-
-  if (apiType === "openai") {
-    return callOpenAI(apiKey, model, messages);
   }
 
   return callOpenRouter(apiKey, model, messages);

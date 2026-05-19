@@ -31,7 +31,7 @@ export default function DashboardPage() {
   const { data: activity, isLoading: actLoading } = useGetActivity({ limit: 10 });
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
       <div>
         <h1 className="text-xl font-bold text-foreground">Обзор</h1>
         <p className="text-sm text-muted-foreground mt-0.5">Статус системы FavoriteChat</p>
@@ -61,7 +61,7 @@ export default function DashboardPage() {
           ) : (
             <div className="divide-y divide-border">
               {activity.map((item) => (
-                <div key={item.id} className="flex items-start gap-3 px-4 py-3 hover:bg-muted/30 transition-colors" data-testid={`row-activity-${item.id}`}>
+                <div key={item.id} data-testid={`row-activity-${item.id}`} className="flex items-start gap-3 px-4 py-3 hover:bg-muted/30 transition-colors">
                   <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
                     <Bot className="w-3.5 h-3.5 text-primary" />
                   </div>

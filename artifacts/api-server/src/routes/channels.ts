@@ -41,7 +41,7 @@ router.post("/channels", async (req, res): Promise<void> => {
 });
 
 router.get("/channels/:id", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(req.params.id as string);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
   const [ch] = await db.select().from(channelsTable).where(eq(channelsTable.id, id));
   if (!ch) { res.status(404).json({ error: "Not found" }); return; }
@@ -51,7 +51,7 @@ router.get("/channels/:id", async (req, res): Promise<void> => {
 });
 
 router.put("/channels/:id", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(req.params.id as string);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
   const parse = UpdateChannelBody.safeParse(req.body);
   if (!parse.success) { res.status(400).json({ error: "Invalid body" }); return; }
@@ -67,7 +67,7 @@ router.put("/channels/:id", async (req, res): Promise<void> => {
 });
 
 router.delete("/channels/:id", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(req.params.id as string);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
   await db.delete(channelAgentsTable).where(eq(channelAgentsTable.channelId, id));
   await db.delete(channelsTable).where(eq(channelsTable.id, id));
@@ -75,7 +75,7 @@ router.delete("/channels/:id", async (req, res): Promise<void> => {
 });
 
 router.get("/channels/:id/agents", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(req.params.id as string);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
   const bindings = await db.select({ agent: agentsTable })
     .from(channelAgentsTable)
@@ -90,7 +90,7 @@ router.get("/channels/:id/agents", async (req, res): Promise<void> => {
 });
 
 router.post("/channels/:id/agents", async (req, res): Promise<void> => {
-  const channelId = parseInt(req.params.id);
+  const channelId = parseInt(req.params.id as string);
   if (isNaN(channelId)) { res.status(400).json({ error: "Invalid id" }); return; }
   const parse = BindChannelAgentBody.safeParse(req.body);
   if (!parse.success) { res.status(400).json({ error: "Invalid body" }); return; }
@@ -106,8 +106,8 @@ router.post("/channels/:id/agents", async (req, res): Promise<void> => {
 });
 
 router.delete("/channels/:id/agents/:agentId", async (req, res): Promise<void> => {
-  const channelId = parseInt(req.params.id);
-  const agentId = parseInt(req.params.agentId);
+  const channelId = parseInt(req.params.id as string);
+  const agentId = parseInt(req.params.agentId as string);
   if (isNaN(channelId) || isNaN(agentId)) { res.status(400).json({ error: "Invalid id" }); return; }
   await db.delete(channelAgentsTable)
     .where(and(eq(channelAgentsTable.channelId, channelId), eq(channelAgentsTable.agentId, agentId)));

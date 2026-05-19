@@ -7,10 +7,10 @@ import {
   useListAgents, useListChannelAgents, useBindChannelAgent, useUnbindChannelAgent,
   getListChannelsQueryKey,
 } from "@workspace/api-client-react";
-import type { Channel, Agent } from "@workspace/api-client-react";
+import type { Channel } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -33,7 +33,9 @@ type ChannelForm = z.infer<typeof channelSchema>;
 function ManageAgentsDialog({ channel }: { channel: Channel }) {
   const [open, setOpen] = useState(false);
   const { data: allAgents } = useListAgents();
-  const { data: channelAgents, refetch } = useListChannelAgents(channel.id, { query: { enabled: open } });
+  const { data: channelAgents, refetch } = useListChannelAgents(channel.id, {
+    query: { enabled: open },
+  });
   const bind = useBindChannelAgent();
   const unbind = useUnbindChannelAgent();
   const { toast } = useToast();
@@ -77,7 +79,9 @@ function ManageAgentsDialog({ channel }: { channel: Channel }) {
                 ))}
               </div>
             </div>
-          ) : <p className="text-sm text-muted-foreground">Нет привязанных агентов</p>}
+          ) : (
+            <p className="text-sm text-muted-foreground">Нет привязанных агентов</p>
+          )}
 
           {unbound.length > 0 && (
             <div>
@@ -110,7 +114,9 @@ function CreateChannelDialog({ onCreated }: { onCreated: () => void }) {
 
   async function onSubmit(values: ChannelForm) {
     try {
-      await create.mutateAsync({ data: { ...values, linkedGroupId: values.linkedGroupId || null } });
+      await create.mutateAsync({
+        data: { ...values, linkedGroupId: values.linkedGroupId || null },
+      });
       toast({ title: "Канал добавлен!" });
       onCreated();
       setOpen(false);
@@ -123,9 +129,7 @@ function CreateChannelDialog({ onCreated }: { onCreated: () => void }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" data-testid="button-create-channel">
-          <Plus className="w-4 h-4 mr-1.5" /> Добавить канал
-        </Button>
+        <Button size="sm" data-testid="button-create-channel"><Plus className="w-4 h-4 mr-1.5" /> Добавить канал</Button>
       </DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader><DialogTitle>Добавить канал</DialogTitle></DialogHeader>
@@ -147,7 +151,7 @@ function CreateChannelDialog({ onCreated }: { onCreated: () => void }) {
             )} />
             <FormField control={form.control} name="linkedGroupId" render={({ field }) => (
               <FormItem>
-                <FormLabel>ID группы комментариев (linkedGroupId)</FormLabel>
+                <FormLabel>ID группы комментариев (необязательно)</FormLabel>
                 <FormControl><Input placeholder="-100987654321" {...field} data-testid="input-linked-group-id" /></FormControl>
                 <FormMessage />
               </FormItem>
@@ -204,7 +208,7 @@ export default function ChannelsPage() {
   }
 
   return (
-    <div className="p-6 space-y-5">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-5">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-foreground">Каналы</h1>
@@ -241,8 +245,16 @@ export default function ChannelsPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <Switch checked={ch.active} onCheckedChange={(v) => handleToggle(ch.id, v)} data-testid={`switch-channel-${ch.id}`} />
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(ch.id)} data-testid={`button-delete-channel-${ch.id}`}>
+                    <Switch
+                      checked={ch.active}
+                      onCheckedChange={(v) => handleToggle(ch.id, v)}
+                      data-testid={`switch-channel-${ch.id}`}
+                    />
+                    <Button
+                      variant="ghost" size="icon" className="h-7 w-7 text-destructive"
+                      onClick={() => handleDelete(ch.id)}
+                      data-testid={`button-delete-channel-${ch.id}`}
+                    >
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>
                   </div>

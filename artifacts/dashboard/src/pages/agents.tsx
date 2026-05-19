@@ -10,7 +10,7 @@ import {
 import type { Agent } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -38,7 +38,7 @@ const FAVORITE_MODELS = [
 
 const formSchema = z.object({
   botToken: z.string().min(20, "Введите токен бота"),
-  apiType: z.enum(["openrouter", "favorite", "openai"]),
+  apiType: z.enum(["openrouter", "favorite"]),
   apiKey: z.string().min(1, "Введите API ключ"),
   apiUrl: z.string().optional(),
   model: z.string().min(1, "Выберите модель"),
@@ -50,11 +50,14 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-function AgentCard({ agent, onDelete, onToggle }: { agent: Agent; onDelete: (id: number) => void; onToggle: (id: number, active: boolean) => void }) {
+function AgentCard({ agent, onDelete, onToggle }: {
+  agent: Agent;
+  onDelete: (id: number) => void;
+  onToggle: (id: number, active: boolean) => void;
+}) {
   const apiColors: Record<string, string> = {
     openrouter: "bg-purple-500/10 text-purple-400",
     favorite: "bg-blue-500/10 text-blue-400",
-    openai: "bg-green-500/10 text-green-400",
   };
 
   return (
@@ -89,6 +92,7 @@ function AgentCard({ agent, onDelete, onToggle }: { agent: Agent; onDelete: (id:
           <Badge className={`text-xs ${apiColors[agent.apiType] ?? ""}`}>{agent.apiType}</Badge>
           <Badge variant="outline" className="text-xs">{agent.model}</Badge>
           <Badge variant="secondary" className="text-xs">{agent.responseChance}% шанс</Badge>
+          {agent.webhookRegistered && <Badge variant="secondary" className="text-xs text-green-500">webhook ✓</Badge>}
         </div>
       </CardContent>
     </Card>
@@ -106,7 +110,11 @@ function CreateAgentDialog({ onCreated }: { onCreated: () => void }) {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: { botToken: "", apiType: "favorite", apiKey: "", apiUrl: "", model: "gemini-3.0-flash-thinking", userPrompt: "", responseChance: 80, minDelaySec: 2, maxDelaySec: 10 },
+    defaultValues: {
+      botToken: "", apiType: "favorite", apiKey: "", apiUrl: "",
+      model: "gemini-3.0-flash-thinking", userPrompt: "",
+      responseChance: 80, minDelaySec: 2, maxDelaySec: 10,
+    },
   });
 
   const apiType = form.watch("apiType");
@@ -116,7 +124,7 @@ function CreateAgentDialog({ onCreated }: { onCreated: () => void }) {
     if (!token) return;
     const r = await validateToken.mutateAsync({ data: { token } });
     setTokenOk(r.valid);
-    if (r.valid && r.firstName) toast({ title: `Бот найден: ${r.firstName} (@${r.username})` });
+    if (r.valid && r.firstName) toast({ title: `Бот: ${r.firstName} (@${r.username})` });
     else toast({ variant: "destructive", title: r.error ?? "Неверный токен" });
   }
 
@@ -131,7 +139,13 @@ function CreateAgentDialog({ onCreated }: { onCreated: () => void }) {
 
   async function onSubmit(values: FormValues) {
     try {
-      await create.mutateAsync({ data: { ...values, apiUrl: values.apiUrl || null, userPrompt: values.userPrompt || null } });
+      await create.mutateAsync({
+        data: {
+          ...values,
+          apiUrl: values.apiUrl || null,
+          userPrompt: values.userPrompt || null,
+        },
+      });
       toast({ title: "Агент создан!" });
       onCreated();
       setOpen(false);
@@ -146,9 +160,7 @@ function CreateAgentDialog({ onCreated }: { onCreated: () => void }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" data-testid="button-create-agent">
-          <Plus className="w-4 h-4 mr-1.5" /> Добавить агента
-        </Button>
+        <Button size="sm" data-testid="button-create-agent"><Plus className="w-4 h-4 mr-1.5" /> Добавить агента</Button>
       </DialogTrigger>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -162,7 +174,9 @@ function CreateAgentDialog({ onCreated }: { onCreated: () => void }) {
                 <div className="flex gap-2">
                   <FormControl><Input placeholder="1234567890:AAF..." {...field} data-testid="input-bot-token" /></FormControl>
                   <Button type="button" variant="outline" size="sm" onClick={checkToken} disabled={validateToken.isPending} className="flex-shrink-0">
-                    {validateToken.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : tokenOk === true ? <CheckCircle className="w-4 h-4 text-green-500" /> : tokenOk === false ? <XCircle className="w-4 h-4 text-destructive" /> : "Проверить"}
+                    {validateToken.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> :
+                      tokenOk === true ? <CheckCircle className="w-4 h-4 text-green-500" /> :
+                      tokenOk === false ? <XCircle className="w-4 h-4 text-destructive" /> : "Проверить"}
                   </Button>
                 </div>
                 <FormMessage />
@@ -177,7 +191,6 @@ function CreateAgentDialog({ onCreated }: { onCreated: () => void }) {
                   <SelectContent>
                     <SelectItem value="favorite">FavoriteAPI (Gemini)</SelectItem>
                     <SelectItem value="openrouter">OpenRouter</SelectItem>
-                    <SelectItem value="openai">OpenAI</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -198,9 +211,16 @@ function CreateAgentDialog({ onCreated }: { onCreated: () => void }) {
               <FormItem>
                 <FormLabel>API ключ</FormLabel>
                 <div className="flex gap-2">
-                  <FormControl><Input placeholder={apiType === "favorite" ? "fa_sk_..." : "sk-..."} type="password" {...field} data-testid="input-api-key" /></FormControl>
+                  <FormControl>
+                    <Input
+                      placeholder={apiType === "favorite" ? "fa_sk_..." : "sk-or-..."}
+                      type="password" {...field} data-testid="input-api-key"
+                    />
+                  </FormControl>
                   <Button type="button" variant="outline" size="sm" onClick={checkKey} disabled={validateKey.isPending} className="flex-shrink-0">
-                    {validateKey.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : keyOk === true ? <CheckCircle className="w-4 h-4 text-green-500" /> : keyOk === false ? <XCircle className="w-4 h-4 text-destructive" /> : "Проверить"}
+                    {validateKey.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> :
+                      keyOk === true ? <CheckCircle className="w-4 h-4 text-green-500" /> :
+                      keyOk === false ? <XCircle className="w-4 h-4 text-destructive" /> : "Проверить"}
                   </Button>
                 </div>
                 <FormMessage />
@@ -214,7 +234,9 @@ function CreateAgentDialog({ onCreated }: { onCreated: () => void }) {
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl><SelectTrigger data-testid="select-model"><SelectValue /></SelectTrigger></FormControl>
                     <SelectContent>
-                      {FAVORITE_MODELS.map((m) => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
+                      {FAVORITE_MODELS.map((m) => (
+                        <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 ) : (
@@ -227,7 +249,9 @@ function CreateAgentDialog({ onCreated }: { onCreated: () => void }) {
             <FormField control={form.control} name="userPrompt" render={({ field }) => (
               <FormItem>
                 <FormLabel>Системный промпт (необязательно)</FormLabel>
-                <FormControl><Textarea rows={3} placeholder="Ты — живой участник чата..." {...field} data-testid="textarea-prompt" /></FormControl>
+                <FormControl>
+                  <Textarea rows={3} placeholder="Ты — живой участник чата..." {...field} data-testid="textarea-prompt" />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )} />
@@ -235,21 +259,21 @@ function CreateAgentDialog({ onCreated }: { onCreated: () => void }) {
             <div className="grid grid-cols-3 gap-3">
               <FormField control={form.control} name="responseChance" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Шанс ответа %</FormLabel>
+                  <FormLabel>Шанс %</FormLabel>
                   <FormControl><Input type="number" min={0} max={100} {...field} data-testid="input-response-chance" /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
               <FormField control={form.control} name="minDelaySec" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Мин. задержка сек</FormLabel>
+                  <FormLabel>Мин. сек</FormLabel>
                   <FormControl><Input type="number" min={0} {...field} data-testid="input-min-delay" /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
               <FormField control={form.control} name="maxDelaySec" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Макс. задержка сек</FormLabel>
+                  <FormLabel>Макс. сек</FormLabel>
                   <FormControl><Input type="number" min={0} {...field} data-testid="input-max-delay" /></FormControl>
                   <FormMessage />
                 </FormItem>
@@ -257,7 +281,9 @@ function CreateAgentDialog({ onCreated }: { onCreated: () => void }) {
             </div>
 
             <Button type="submit" className="w-full" disabled={create.isPending} data-testid="button-submit-agent">
-              {create.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Создание...</> : "Создать агента"}
+              {create.isPending
+                ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Создание...</>
+                : "Создать агента"}
             </Button>
           </form>
         </Form>
@@ -287,7 +313,7 @@ export default function AgentsPage() {
   }
 
   return (
-    <div className="p-6 space-y-5">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-5">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-foreground">Агенты</h1>
@@ -310,7 +336,9 @@ export default function AgentsPage() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {agents.map((a) => <AgentCard key={a.id} agent={a} onDelete={handleDelete} onToggle={handleToggle} />)}
+          {agents.map((a) => (
+            <AgentCard key={a.id} agent={a} onDelete={handleDelete} onToggle={handleToggle} />
+          ))}
         </div>
       )}
     </div>

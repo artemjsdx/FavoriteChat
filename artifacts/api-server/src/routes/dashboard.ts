@@ -3,7 +3,6 @@ import { db } from "@workspace/db";
 import {
   agentsTable,
   channelsTable,
-  channelAgentsTable,
   messagesTable,
   discussionsTable,
   settingsTable,
@@ -12,7 +11,6 @@ import { eq, gte, and, desc, count } from "drizzle-orm";
 
 const router = Router();
 
-// Dashboard stats
 router.get("/dashboard/stats", async (req, res) => {
   try {
     const [totalAgentsRes] = await db.select({ count: count() }).from(agentsTable);
@@ -44,7 +42,6 @@ router.get("/dashboard/stats", async (req, res) => {
   }
 });
 
-// Activity feed
 router.get("/activity", async (req, res) => {
   try {
     const limit = Math.min(parseInt(String(req.query.limit ?? "50")), 100);
@@ -93,7 +90,6 @@ router.get("/activity", async (req, res) => {
   }
 });
 
-// Models list
 router.get("/models", async (req, res) => {
   try {
     const r = await fetch("https://openrouter.ai/api/v1/models");
@@ -132,7 +128,6 @@ router.get("/models", async (req, res) => {
   }
 });
 
-// Settings
 router.get("/settings", async (req, res) => {
   try {
     let [settings] = await db.select().from(settingsTable).limit(1);

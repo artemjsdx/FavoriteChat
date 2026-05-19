@@ -58,7 +58,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="p-6 space-y-5 max-w-xl">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-5 max-w-xl">
       <div>
         <h1 className="text-xl font-bold text-foreground">Настройки</h1>
         <p className="text-sm text-muted-foreground mt-0.5">Глобальные параметры системы</p>

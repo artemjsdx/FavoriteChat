@@ -16,7 +16,7 @@ export default function Sidebar() {
   const { theme, toggle } = useTheme();
 
   return (
-    <aside className="w-56 flex-shrink-0 flex flex-col border-r border-sidebar-border bg-sidebar h-screen">
+    <aside className="w-56 flex-shrink-0 hidden md:flex flex-col border-r border-sidebar-border bg-sidebar h-screen">
       <div className="flex items-center gap-2.5 px-4 py-4 border-b border-sidebar-border">
         <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center flex-shrink-0">
           <Bot className="w-4 h-4 text-primary-foreground" />
