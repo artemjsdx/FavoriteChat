@@ -1,16 +1,29 @@
 {
-  "name": "workspace",
-  "version": "0.0.0",
-  "license": "MIT",
+  "name": "favoritechat",
+  "version": "3.0.0",
+  "description": "Multi-agent Telegram bot — AI agents discuss posts in channels",
+  "type": "module",
   "scripts": {
-    "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; case \"$npm_config_user_agent\" in pnpm/*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",
-    "build": "pnpm run typecheck && pnpm -r --if-present run build",
-    "typecheck:libs": "tsc --build",
-    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
   },
-  "private": true,
+  "dependencies": {
+    "grammy": "^1.27.0",
+    "express": "^4.21.0",
+    "drizzle-orm": "^0.39.0",
+    "postgres": "^3.4.5",
+    "zod": "^3.23.8",
+    "pino": "^9.0.0",
+    "pino-pretty": "^11.0.0",
+    "dotenv": "^16.4.7"
+  },
   "devDependencies": {
-    "prettier": "^3.8.3",
-    "typescript": "~5.9.3"
+    "typescript": "^5.7.3",
+    "tsx": "^4.19.3",
+    "drizzle-kit": "^0.30.6",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.0.0"
   }
 }
